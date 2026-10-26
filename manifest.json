@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.clear-built-dev.london-motion",
+  "name": "London Motion",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "Shas Veeramani",
+  "description": "Subtle animated wallpapers for the London theme: a moving bus, rotating London Eye, and waving palace and castle flags.",
+  "kinds": ["service"],
+  "entryPoints": {"service": "Background.qml"},
+  "omarchy": {"clonedFrom": "omarchy.background"}
+}
