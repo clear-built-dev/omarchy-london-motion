@@ -11,8 +11,10 @@ permission text are preserved in this repository's LICENSE.
 London additions and SVG motion assets: Copyright (c) 2026 Shas Veeramani.
 
 The bus, wheel, and clean skyline backdrop derive from the original London SVG
-created for the companion theme. The flag animation samples the companion
-theme's 6K exports of the approved AI-assisted pencil artwork at runtime. No font binaries or
+created for the companion theme. The palace/castle render bases are sharpened 6K exports of the approved
+AI-assisted architectural drawings and are bundled in `assets/`. Static theme
+backgrounds use the same slate-blue treatment; the renderer uses uncoloured
+bases to avoid applying that treatment twice. No font binaries or
 third-party photograph downloads are bundled. See the companion theme's
 ARTWORK.md for illustration provenance.
 

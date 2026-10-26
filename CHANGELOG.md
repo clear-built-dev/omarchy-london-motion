@@ -2,6 +2,10 @@
 
 ## 2.0.0
 
+- Full scene width and extended sky adapt animated wallpapers to 16:10 laptop displays.
+
+- Slate-coloured static PNGs make the carousel and fallback match the animated design.
+
 - Clock-adjacent wallpaper controls with a three-scene selector, motion and lighting switches, saved presets, weather controls and city input.
 - Morning, afternoon, evening and night follow seasonal solar position for the configured city, with local-time fallback.
 - Slate-blue atmospheric treatment of the current architectural pen-and-pencil drawings, preserving fine lines and restrained colour accents.

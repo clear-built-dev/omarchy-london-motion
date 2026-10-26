@@ -4,13 +4,14 @@ import QtQuick.Effects
 import "Daylight.js" as Daylight
 import "Weather.js" as Weather
 
-// Native scene animation: a static background plus a small moving item/patch.
+// Native scene animation with renderer-owned sources and continuous flag deformation.
 Item {
     id: motion
     required property string backgroundPath
     property bool active: false
     property bool animationEnabled: true
     property bool sceneMotionEnabled: true
+    property bool flagRippleEnabled: true
     property bool lightingEnabled: true
     readonly property string name: backgroundPath.split("/").pop()
     readonly property bool busScene: name === "london.png"
@@ -18,7 +19,9 @@ Item {
     readonly property bool supported: busScene || palace || name === "windsor-castle-phone-box.png"
     readonly property real imageWidth: 3840
     readonly property real imageHeight: 2160
-    readonly property real fitScale: Math.max(width / imageWidth, height / imageHeight)
+    // Fit the complete horizontal composition; taller screens gain sky above it.
+    readonly property real fitScale: width / imageWidth
+    readonly property real extraSky: Math.max(0, height - imageHeight * fitScale)
     readonly property real displayScale: Math.max(1, Screen.devicePixelRatio)
     property real seconds: 0
     property date clockTime: new Date()
@@ -53,18 +56,9 @@ Item {
         onTriggered: motion.seconds = (motion.seconds + 0.05) % 660
     }
 
-    Item {
-        id: scene
-        width: motion.imageWidth
-        height: motion.imageHeight
-        x: (motion.width - width) / 2
-        y: (motion.height - height) / 2
-        scale: motion.fitScale
-        layer.enabled: true
-        layer.textureSize: Qt.size(Math.min(6144, Math.ceil(width * motion.fitScale * motion.displayScale)), Math.min(3456, Math.ceil(height * motion.fitScale * motion.displayScale)))
-        layer.smooth: true
-        layer.effect: ShaderEffect {
+    component LightingEffect: ShaderEffect {
             property var source
+            property real skyOnly: 0
             property real brightness: motion.daylight.brightness + motion.weatherLook.brightness
             property real contrast: motion.daylight.contrast + motion.weatherLook.contrast
             property real saturation: motion.daylight.saturation + motion.weatherLook.saturation
@@ -74,6 +68,7 @@ Item {
             property real sceneKind: motion.busScene ? 0 : motion.palace ? 1 : 2
             property real lightingStrength: motion.lightingEnabled ? 1 : 0
             property real flagPhase: motion.seconds * 2 * Math.PI / 4.4
+            property real flagStrength: motion.flagRippleEnabled ? 1 : 0
             fragmentShader: "SceneLighting.frag.qsb"
             Behavior on brightness { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
             Behavior on contrast { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
@@ -83,10 +78,42 @@ Item {
             Behavior on daylightAmount { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
         }
 
+    // Extend the source's top row, applying the identical lighting at sky y=0.
+    ShaderEffectSource {
+        id: skySource
+        visible: false
+        sourceItem: scene
+        sourceRect: Qt.rect(0, 0, motion.imageWidth, 1)
+        textureSize: Qt.size(Math.max(1, Math.ceil(motion.width * motion.displayScale)), 1)
+        live: motion.extraSky > 0
+        smooth: true
+    }
+    LightingEffect {
+        x: 0; y: 0
+        width: motion.width
+        height: motion.extraSky
+        visible: height > 0
+        source: skySource
+        skyOnly: 1
+    }
+
+    Item {
+        id: scene
+        width: motion.imageWidth
+        height: motion.imageHeight
+        x: 0
+        y: motion.height - height * motion.fitScale
+        scale: motion.fitScale
+        transformOrigin: Item.TopLeft
+        layer.enabled: true
+        layer.textureSize: Qt.size(Math.min(6144, Math.ceil(width * motion.fitScale * motion.displayScale)), Math.min(3456, Math.ceil(height * motion.fitScale * motion.displayScale)))
+        layer.smooth: true
+        layer.effect: LightingEffect {}
+
         Image {
             id: picture
             anchors.fill: parent
-            source: !motion.backgroundPath ? "" : motion.busScene ? Qt.resolvedUrl("assets/london-base.png") : "file://" + motion.backgroundPath
+            source: !motion.backgroundPath || !motion.supported ? "" : Qt.resolvedUrl(motion.busScene ? "assets/london-base.png" : motion.palace ? "assets/buckingham-palace-base.png" : "assets/windsor-castle-base.png")
             asynchronous: true
             smooth: true
             mipmap: true

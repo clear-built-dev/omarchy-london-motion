@@ -13,6 +13,8 @@ layout(std140, binding = 0) uniform buf {
     float sceneKind;
     float lightingStrength;
     float flagPhase;
+    float flagStrength;
+    float skyOnly;
 } ubuf;
 layout(binding = 1) uniform sampler2D source;
 
@@ -29,7 +31,8 @@ void main() {
     // Deform the cloth in this same full-scene texture lookup. A separate
     // Canvas patch resamples the image independently and can create a seam
     // even where its displacement is zero. The pole is never displaced.
-    vec2 sampleUV = qt_TexCoord0;
+    vec2 sceneUV = ubuf.skyOnly > 0.5 ? vec2(qt_TexCoord0.x, 0.0) : qt_TexCoord0;
+    vec2 sampleUV = sceneUV;
     if (ubuf.sceneKind > 0.5) {
         vec2 p = sampleUV * vec2(1672.0, 941.0);
         float start = ubuf.sceneKind < 1.5 ? 953.0 : 596.0;
@@ -40,10 +43,17 @@ void main() {
                          * (1.0 - smoothstep(edge + 3.0, start + 54.0, p.x));
         float vertical = smoothstep(top, top + 12.0, p.y)
                        * (1.0 - smoothstep(top + 51.0, top + 66.0, p.y));
-        float shift = 1.7 * horizontal * vertical * sin(along * 7.0 - ubuf.flagPhase);
+        float shift = ubuf.flagStrength * 1.7 * horizontal * vertical * sin(along * 7.0 - ubuf.flagPhase);
         sampleUV.y += shift / 941.0;
     }
     vec4 pixel = texture(source, sampleUV);
+    if (ubuf.skyOnly > 0.5) {
+        // Average fine paper grain across the sky strip so extending one row
+        // cannot turn its individual speckles into vertical streaks.
+        pixel = vec4(0.0);
+        for (int tap = -4; tap <= 4; ++tap)
+            pixel += texture(source, vec2(clamp(sampleUV.x + float(tap) * 2.0 / 1672.0, 0.0, 1.0), 0.0)) / 9.0;
+    }
     vec3 color = pixel.rgb;
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
     // Isolate the amber emission baked into the pencil art. The green/blue
@@ -54,7 +64,7 @@ void main() {
     float region;
     float lampCore = 0.0;
     if (ubuf.sceneKind < 0.5) {
-        vec2 p = qt_TexCoord0 * vec2(3840.0, 2160.0);
+        vec2 p = sceneUV * vec2(3840.0, 2160.0);
         region = max(rectangle(p, vec2(300.0, 1450.0), vec2(1660.0, 1670.0)),
                      smoothstep(1650.0, 1700.0, p.y));
         lampCore = max(lampCore, circleMask(p, vec2(240.0, 1445.8), 13.0));
@@ -85,11 +95,11 @@ void main() {
         // a colour mapping, without blur, resampling, or regenerated linework.
         float grey = dot(pixel.rgb, vec3(0.2126, 0.7152, 0.0722));
         float day = mix(0.30, ubuf.daylightAmount, ubuf.lightingStrength);
-        float horizon = smoothstep(0.0, 0.68, qt_TexCoord0.y);
+        float horizon = smoothstep(0.0, 0.68, sceneUV.y);
         vec3 daySky = mix(vec3(0.29, 0.36, 0.42), vec3(0.50, 0.58, 0.61), horizon);
         vec3 nightSky = mix(vec3(0.045, 0.080, 0.115), vec3(0.19, 0.26, 0.31), horizon);
         // The road falls back into darker slate below the architectural skyline.
-        float foreground = smoothstep(0.78, 1.0, qt_TexCoord0.y);
+        float foreground = smoothstep(0.78, 1.0, sceneUV.y);
         daySky = mix(daySky, vec3(0.33, 0.41, 0.46), foreground * 0.65);
         nightSky = mix(nightSky, vec3(0.09, 0.15, 0.20), foreground * 0.65);
         vec3 substrate = mix(nightSky, daySky, day);
@@ -108,7 +118,7 @@ void main() {
         color += vec3(ubuf.brightness * 0.07);
         // A few precise lantern glass masks give a soft drawn amber highlight.
         // Building windows stay dark; the drawing does not contain interiors.
-        vec2 p = qt_TexCoord0 * vec2(1672.0, 941.0);
+        vec2 p = sceneUV * vec2(1672.0, 941.0);
         float lamps = 0.0;
         if (ubuf.sceneKind < 1.5) {
             lamps = max(lamps, lanternMask(p, vec2(57.0, 715.0), vec2(4.5, 6.5)));

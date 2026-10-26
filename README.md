@@ -16,7 +16,9 @@ Animated 6K wallpapers with local-time lighting and optional live weather for th
 The comparison image above shows the four lighting treatments; automatic
 lighting blends gradually through the day. Big Ben's clock always shows actual local time.
 
-The backgrounds remain still PNGs. The plugin draws the moving parts locally
+The theme's saved PNGs already use the slate palette, so carousel thumbnails and
+static fallbacks match. Uncoloured 6K drawing bases live in this plugin's assets
+for dynamic rendering; the palette is applied once. The backgrounds remain still PNGs. The plugin draws the moving parts locally
 at 20 frames per second, with no video playback. Motion and time-of-day lighting
 work offline; optional live weather uses a bounded request to wttr.in every 15 minutes. It animates only the London theme's three named backgrounds.
 
@@ -203,8 +205,12 @@ disable the plugin with the command above when you want still wallpapers.
 Resource use depends on monitor count, resolution, and graphics driver; no
 battery-life or performance benchmark is claimed.
 
-The existing background picker, click handling, transitions, and monitor crop
-behavior are retained from Omarchy. The plugin uses the same installed Omarchy
+The existing background picker, click handling and transitions are retained.
+Animated scenes preserve the full landscape width on taller displays, extending
+the already-lit sky into the extra height. This keeps the scene in frame on both
+16:9 external monitors and 16:10 laptop panels without stretching the artwork.
+
+![16:9 and 16:10 scene layouts](docs/display-layout.png) The plugin uses the same installed Omarchy
 theme/background selector commands and reads the current theme/background state.
 It does not download assets or execute repository-provided setup scripts. Configured
 weather performs the documented HTTPS request, without running provider content.
