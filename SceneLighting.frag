@@ -43,7 +43,8 @@ void main() {
                          * (1.0 - smoothstep(edge + 3.0, start + 54.0, p.x));
         float vertical = smoothstep(top, top + 12.0, p.y)
                        * (1.0 - smoothstep(top + 51.0, top + 66.0, p.y));
-        float shift = ubuf.flagStrength * 1.7 * horizontal * vertical * sin(along * 7.0 - ubuf.flagPhase);
+        // A visible ripple at laptop scale, with zero displacement at the pole.
+        float shift = ubuf.flagStrength * 4.5 * horizontal * vertical * sin(along * 7.0 - ubuf.flagPhase);
         sampleUV.y += shift / 941.0;
     }
     vec4 pixel = texture(source, sampleUV);

@@ -2,6 +2,8 @@
 
 ## 2.0.0
 
+- Stronger flag ripples remain visible on smaller laptop displays while poles stay fixed.
+
 - Full scene width and extended sky adapt animated wallpapers to 16:10 laptop displays.
 
 - Slate-coloured static PNGs make the carousel and fallback match the animated design.
