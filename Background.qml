@@ -30,6 +30,14 @@ Item {
   property string pendingShellRaw: ""
   property real revealProgress: 1
   property real motionSeconds: 0
+  property string daylightOverride: ""
+  property string daylightPhase: ""
+  property string weatherOverride: "automatic"
+
+  WeatherService {
+    id: weatherService
+    enabled: selectedTheme.text().trim() === "london" && root.weatherOverride !== "off"
+  }
 
   FileView {
     id: selectedTheme
@@ -148,7 +156,21 @@ Item {
     }
 
     function motionStatus(): string {
-      return JSON.stringify({theme: selectedTheme.text().trim(), background: root.displayedBackground, seconds: root.motionSeconds})
+      return JSON.stringify({theme: selectedTheme.text().trim(), background: root.displayedBackground, seconds: root.motionSeconds, timeOfDay: root.daylightPhase, preview: root.daylightOverride || "automatic", weather: root.weatherOverride === "automatic" ? weatherService.condition : root.weatherOverride, weatherLocation: weatherService.locationName, weatherFresh: weatherService.fresh})
+    }
+
+    function previewTimeOfDay(period: string): string {
+      if (["automatic", "morning", "afternoon", "evening", "night"].indexOf(period) < 0)
+        return "Use automatic, morning, afternoon, evening or night"
+      root.daylightOverride = period === "automatic" ? "" : period
+      return "ok"
+    }
+
+    function previewWeather(condition: string): string {
+      if (["automatic", "off", "clear", "cloudy", "rain", "fog", "snow", "storm"].indexOf(condition) < 0)
+        return "Use automatic, off, clear, cloudy, rain, fog, snow or storm"
+      root.weatherOverride = condition
+      return "ok"
     }
 
     function set(path: string): void {
@@ -254,6 +276,9 @@ Item {
         anchors.fill: parent
         backgroundPath: root.displayedBackground
         onSecondsChanged: root.motionSeconds = seconds
+        daylightOverride: root.daylightOverride
+        weatherCondition: root.weatherOverride === "automatic" ? weatherService.condition : root.weatherOverride === "off" ? "none" : root.weatherOverride
+        onDaylightPhaseChanged: root.daylightPhase = daylightPhase
         active: selectedTheme.text().trim() === "london"
                 && root.incomingBackground === "" && root.revealProgress >= 1
       }

@@ -12,7 +12,7 @@ London additions and SVG motion assets: Copyright (c) 2026 Shas Veeramani.
 
 The bus, wheel, and clean skyline backdrop derive from the original London SVG
 created for the companion theme. The flag animation samples the companion
-theme's AI-assisted pencil illustrations at runtime. No font binaries or
+theme's native 6K vector artwork at runtime. No font binaries or
 third-party photograph downloads are bundled. See the companion theme's
 ARTWORK.md for illustration provenance.
 
