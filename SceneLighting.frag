@@ -24,9 +24,19 @@ float rectangle(vec2 p, vec2 low, vec2 high) {
 float circleMask(vec2 p, vec2 center, float radius) {
     return 1.0 - smoothstep(radius - 2.0, radius + 2.0, distance(p, center));
 }
-float lanternMask(vec2 p, vec2 center, vec2 size) {
-    return 1.0 - smoothstep(0.65, 1.3, length((p - center) / size));
+// Tight glass shapes, entirely inside the drawn metal frame.
+float ovalGlass(vec2 p, vec2 center, vec2 size) {
+    return 1.0 - smoothstep(0.70, 1.0, length((p - center) / size));
 }
+float glassPane(vec2 p, vec2 top, vec2 bottom, float topHalf, float bottomHalf) {
+    float t = clamp((p.y - top.y) / (bottom.y - top.y), 0.0, 1.0);
+    float center = mix(top.x, bottom.x, t);
+    float halfWidth = mix(topHalf, bottomHalf, t);
+    return smoothstep(top.y, top.y + 0.45, p.y)
+         * (1.0 - smoothstep(bottom.y - 0.45, bottom.y, p.y))
+         * (1.0 - smoothstep(halfWidth - 0.35, halfWidth, abs(p.x - center)));
+}
+
 void main() {
     // Deform the cloth in this same full-scene texture lookup. A separate
     // Canvas patch resamples the image independently and can create a seam
@@ -122,22 +132,39 @@ void main() {
         vec2 p = sceneUV * vec2(1672.0, 941.0);
         float lamps = 0.0;
         if (ubuf.sceneKind < 1.5) {
-            lamps = max(lamps, lanternMask(p, vec2(57.0, 715.0), vec2(4.5, 6.5)));
-            lamps = max(lamps, lanternMask(p, vec2(736.0, 680.0), vec2(5.0, 7.0)));
-            lamps = max(lamps, lanternMask(p, vec2(895.0, 682.0), vec2(5.0, 7.0)));
-            lamps = max(lamps, lanternMask(p, vec2(1390.0, 717.0), vec2(5.0, 7.0)));
-            lamps = max(lamps, lanternMask(p, vec2(1600.0, 719.0), vec2(4.5, 6.5)));
+            // Individual glass faces on the five front multi-lantern posts.
+            lamps = max(lamps, ovalGlass(p, vec2(58.50, 690.00), vec2(1.80, 2.40)));
+            lamps = max(lamps, ovalGlass(p, vec2(50.50, 703.50), vec2(1.80, 2.40)));
+            lamps = max(lamps, ovalGlass(p, vec2(58.00, 702.20), vec2(1.40, 1.80)));
+            lamps = max(lamps, ovalGlass(p, vec2(66.60, 703.50), vec2(1.80, 2.40)));
+            lamps = max(lamps, ovalGlass(p, vec2(738.00, 673.00), vec2(1.50, 2.00)));
+            lamps = max(lamps, ovalGlass(p, vec2(728.00, 685.80), vec2(1.60, 2.20)));
+            lamps = max(lamps, ovalGlass(p, vec2(737.70, 684.50), vec2(1.60, 2.30)));
+            lamps = max(lamps, ovalGlass(p, vec2(747.00, 685.80), vec2(1.50, 2.10)));
+            lamps = max(lamps, ovalGlass(p, vec2(896.00, 672.00), vec2(1.40, 2.10)));
+            lamps = max(lamps, ovalGlass(p, vec2(886.00, 685.20), vec2(1.50, 2.20)));
+            lamps = max(lamps, ovalGlass(p, vec2(896.00, 683.80), vec2(1.70, 2.00)));
+            lamps = max(lamps, ovalGlass(p, vec2(906.00, 685.50), vec2(1.60, 2.00)));
+            lamps = max(lamps, ovalGlass(p, vec2(1390.00, 708.00), vec2(1.50, 2.10)));
+            lamps = max(lamps, ovalGlass(p, vec2(1381.50, 720.50), vec2(1.60, 2.00)));
+            lamps = max(lamps, ovalGlass(p, vec2(1390.00, 720.20), vec2(1.70, 2.00)));
+            lamps = max(lamps, ovalGlass(p, vec2(1399.00, 721.00), vec2(1.60, 2.20)));
+            lamps = max(lamps, ovalGlass(p, vec2(1600.00, 715.80), vec2(1.50, 1.90)));
+            lamps = max(lamps, ovalGlass(p, vec2(1591.00, 729.00), vec2(1.60, 2.00)));
+            lamps = max(lamps, ovalGlass(p, vec2(1600.00, 728.30), vec2(1.60, 2.00)));
+            lamps = max(lamps, ovalGlass(p, vec2(1609.00, 728.50), vec2(1.50, 2.00)));
         } else {
-            lamps = max(lamps, lanternMask(p, vec2(118.0, 667.0), vec2(7.0, 10.0)));
-            lamps = max(lamps, lanternMask(p, vec2(457.0, 701.0), vec2(6.0, 8.0)));
-            lamps = max(lamps, lanternMask(p, vec2(724.0, 730.0), vec2(5.0, 7.0)));
-            lamps = max(lamps, lanternMask(p, vec2(985.0, 747.0), vec2(4.5, 6.0)));
-            lamps = max(lamps, lanternMask(p, vec2(1237.0, 769.0), vec2(4.0, 5.5)));
-            lamps = max(lamps, lanternMask(p, vec2(1490.0, 776.0), vec2(4.0, 5.5)));
+            // Six Windsor panes: follow their taper, not the neighbouring foliage.
+            lamps = max(lamps, glassPane(p, vec2(121.00, 661.00), vec2(121.00, 679.00), 10.00, 6.00));
+            lamps = max(lamps, glassPane(p, vec2(456.00, 699.00), vec2(456.00, 712.00), 7.00, 4.00));
+            lamps = max(lamps, glassPane(p, vec2(724.50, 730.00), vec2(724.50, 739.00), 4.50, 3.00));
+            lamps = max(lamps, glassPane(p, vec2(999.00, 755.00), vec2(999.00, 764.00), 4.20, 2.60));
+            lamps = max(lamps, glassPane(p, vec2(1291.00, 778.00), vec2(1291.00, 785.00), 3.70, 2.60));
+            lamps = max(lamps, glassPane(p, vec2(1490.00, 780.00), vec2(1490.00, 788.00), 4.50, 2.70));
         }
         float night = (1.0 - ubuf.daylightAmount) * ubuf.lightingStrength;
         // Preserve the dark ink frame; light only the paler glass inside it.
-        float glass = smoothstep(0.16, 0.55, grey);
+        float glass = smoothstep(0.35, 0.72, grey);
         color = mix(color, vec3(0.75, 0.59, 0.35), lamps * night * glass * 0.72);
     }
     fragColor = vec4(clamp(color, 0.0, 1.0), pixel.a) * ubuf.qt_Opacity;

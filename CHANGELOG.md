@@ -1,5 +1,9 @@
 # Changes
 
+## 2.0.1
+
+- Align lamp illumination to the drawn glass panes; remove detached highlights.
+
 ## 2.0.0
 
 - Stronger flag ripples remain visible on smaller laptop displays while poles stay fixed.
