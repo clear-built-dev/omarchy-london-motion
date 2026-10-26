@@ -4,8 +4,6 @@ Animated 6K wallpapers with local-time lighting and optional live weather for th
 
 ![London Motion preview](preview.png)
 
-[Watch the animation demo](docs/demo.mp4).
-
 ![Morning, afternoon, evening and night on all three backgrounds](docs/time-of-day.png)
 
 - A red bus crosses Westminster Bridge in 110 seconds.
@@ -15,8 +13,8 @@ Animated 6K wallpapers with local-time lighting and optional live weather for th
 - Morning, afternoon, evening and night lighting blends gradually through the day.
 - Optional real weather adds clear/cloudy lighting, rain, fog, snow or subdued storm conditions.
 
-The demo accelerates the four lighting presets for comparison; actual lighting
-blends over hours. Big Ben's clock always shows actual local time.
+The comparison image above shows the four lighting treatments; automatic
+lighting blends gradually through the day. Big Ben's clock always shows actual local time.
 
 The backgrounds remain still PNGs. The plugin draws the moving parts locally
 at 20 frames per second, with no video playback. Motion and time-of-day lighting
@@ -27,10 +25,10 @@ work offline; optional live weather uses a bounded request to wttr.in every 15 m
 - **Omarchy Quattro**, tested on **4.0.6-1**, including its Quickshell background
   service and support for `omarchy.clonedFrom` plugin replacements.
 - The [London theme](https://github.com/clear-built-dev/omarchy-london-theme),
-  the **6K vector edition**, installed under the slug **`london`**, with its
-  original background filenames and flag positions. This plugin edition is not
-  compatible with the first edition's pencil backgrounds. Renamed themes and
-  modified flag artwork are not supported.
+  the matching **6K architectural pen-and-pencil edition**, installed under the slug **`london`**, with its
+  original filenames and current palace/castle compositions. Flag animation
+  coordinates match the architectural pen-and-pencil artwork. Older art editions
+  use different positions. Renamed themes and changed flag positions are not supported.
 - Qt Quick, Qt Quick Effects and Quickshell supplied by Omarchy. `curl`, already
   shipped with Omarchy, is used only when weather is configured.
 
@@ -51,7 +49,7 @@ Then add the plugin. Review it before enabling:
 
 ```sh
 omarchy plugin add https://github.com/clear-built-dev/omarchy-london-motion
-omarchy plugin enable io.github.clear-built-dev.london-motion
+omarchy plugin enable io.github.clear-built-dev.london-motion --section center --after omarchy.clock
 omarchy restart shell
 ```
 
@@ -65,9 +63,36 @@ If another wallpaper-renderer clone is enabled, switch back to
 
 Cycle through the three backgrounds with `omarchy theme bg next`.
 
+## Current desktop controls
+
+A wallpaper icon appears immediately to the right of the clock. Click it to open
+**London Wallpaper** controls for background selection, scene motion, time-of-day lighting, fixed light
+presets, live weather, city and weather previews. The icon remains available when
+individual features are off.
+
+Motion, lighting, lighting mode, weather on/off and the city persist across shell
+restarts in `~/.config/omarchy/london-motion.json`. Live weather defaults to off.
+Saving a city does not enable weather; its switch is a separate explicit action.
+The system-time clock continues updating when scene motion is paused.
+
+The main plugin can still be enabled/disabled under **Super + Alt + Space → Setup →
+Plugins**. Temporary preview commands below do not overwrite saved preferences.
+A panel opened from the terminal uses:
+
+```sh
+omarchy-shell io.github.clear-built-dev.london-motion.controls open
+```
+
 ## Time of day
 
-Lighting follows **local system time**, with no location lookup:
+Automatic lighting follows the **sun's position for the configured weather
+city** once that city's coordinates have been received. This accounts for
+seasonal daylight and twilight; the calculation uses UTC and does not assume
+that the city and computer share a time zone. It does not perform an extra
+location lookup. Fixed presets remain available from the control panel.
+
+If no city coordinates are available, lighting falls back to these local-time
+periods:
 
 | Local time | Appearance |
 | --- | --- |
@@ -80,10 +105,14 @@ Lighting follows **local system time**, with no location lookup:
 | 18:00–20:00 | Evening |
 | 20:00–22:00 | Evening gradually becomes night |
 
-These are fixed time periods, not sunrise/sunset calculations. The appearance is
-recalculated from the system clock each minute, including after sleep or clock
-changes. Only the wallpaper changes; terminal and application colours stay the
-same. All moving parts receive the same lighting treatment.
+The appearance is recalculated from the system clock each minute, including
+after sleep or clock changes. The period table above is the offline fallback;
+solar lighting uses approximate NOAA solar-position equations for the known city. Only the wallpaper changes; terminal and application colours stay the
+same. All moving parts receive the same lighting treatment. London retains daylight suppression of its baked-in amber lights. The palace
+and castle drawings start with unlit lamps and use a slate-blue palette matching the London scene, with atmospheric gradients
+and subtle colour shifts for daylight, dusk and night. At night, precise lantern masks add
+restrained warm highlights while preserving ink frames. Windows remain dark.
+These are stylized illustrations rather than photographic reconstructions.
 
 Preview a look without changing the clock, then restore automatic lighting:
 
@@ -92,19 +121,21 @@ omarchy-shell background previewTimeOfDay afternoon
 omarchy-shell background previewTimeOfDay automatic
 ```
 
-Preview changes ease over one minute. They reset to automatic after shell restart.
+Temporary IPC lighting previews ease over 1.2 seconds and reset on shell restart.
+Fixed lighting selected in the panel is saved. Automatic changes ease over one minute.
 
 ## Optional live weather
 
 ![Weather appearance examples](docs/weather.png)
 
 Weather is **disabled until an explicit city or coordinates are configured**.
-It never infers your location from your IP address. It first reads
+It never infers your location from your IP address. It first uses the city saved in the controls panel, then
 `~/.config/omarchy/london-motion-weather.json`; if absent, it uses an explicitly
 saved Omarchy weather location in `~/.local/state/omarchy/settings/weather.json`.
 It does not change Omarchy's global weather settings.
 
-For example, configure the wallpaper to use London by creating
+The controls panel is the preferred way to set a city and enable live weather.
+For compatibility, an explicit fallback city may also be configured by creating
 `~/.config/omarchy/london-motion-weather.json` containing:
 
 ```json
@@ -133,7 +164,8 @@ omarchy-shell background previewWeather automatic
 ```
 
 Preview/off settings reset on shell restart. Remove the wallpaper weather config
-and any explicit global Omarchy weather location to disable fetching persistently.
+and any explicit global Omarchy weather location, or simply turn off **Live weather**
+in the panel to disable fetching persistently.
 Provider reference: https://github.com/chubin/wttr.in#json-output
 
 ## Disable or remove
@@ -182,6 +214,22 @@ weather performs the documented HTTPS request, without running provider content.
 `LondonMotion.qml` implements the animation. `Background.qml` is derived from
 Omarchy's background renderer. The editable SVG motion assets are in `assets/`.
 The development rendering/validation tools are kept outside this release package.
+Flag cloth displacement shares the full-scene texture lookup with the wallpaper;
+poles remain stationary and there is no separately sampled patch at the attachment.
+
+![Flag attachments at two animation phases](docs/flag-attachments.png)
 
 MIT license, retaining David Heinemeier Hansson's upstream copyright and the
 copyright for London additions. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+
+## Lighting shader
+
+`SceneLighting.frag` implements the single-pass lighting treatment. Its compiled
+Qt shader is included as `SceneLighting.frag.qsb`; normal use does not require a
+shader compiler. To rebuild after editing (Qt Shader Tools):
+
+```sh
+/usr/lib/qt6/bin/qsb --glsl '100es,120,150' --hlsl 50 --msl 12 -o SceneLighting.frag.qsb SceneLighting.frag
+```
+
+Solar position reference: https://gml.noaa.gov/grad/solcalc/solareqns.PDF

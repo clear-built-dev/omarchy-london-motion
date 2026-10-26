@@ -12,10 +12,10 @@ London additions and SVG motion assets: Copyright (c) 2026 Shas Veeramani.
 
 The bus, wheel, and clean skyline backdrop derive from the original London SVG
 created for the companion theme. The flag animation samples the companion
-theme's native 6K vector artwork at runtime. No font binaries or
+theme's 6K exports of the approved AI-assisted pencil artwork at runtime. No font binaries or
 third-party photograph downloads are bundled. See the companion theme's
 ARTWORK.md for illustration provenance.
 
-The preview and demo contain only project artwork and generic demonstration
-text. The preview is composed, and the demo is rendered from the QML animation
-component; neither captures a user's private desktop.
+The previews contain only project artwork and generic demonstration text.
+Comparison images are rendered from the QML component and do not capture a
+user's private desktop.

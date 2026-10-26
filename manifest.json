@@ -7,12 +7,21 @@
   "author": "Shas Veeramani",
   "description": "Animated 6K London wallpapers with local-time lighting, optional live weather, moving bus, rotating Eye, clock and waving flags.",
   "kinds": [
-    "service"
+    "service",
+    "bar-widget"
   ],
   "entryPoints": {
-    "service": "Background.qml"
+    "service": "Background.qml",
+    "barWidget": "ControlPanel.qml"
   },
   "omarchy": {
     "clonedFrom": "omarchy.background"
+  },
+  "barWidget": {
+    "displayName": "London Wallpaper",
+    "description": "Motion, lighting and weather controls",
+    "category": "Appearance",
+    "allowMultiple": false,
+    "defaultSection": "center"
   }
 }

@@ -10,6 +10,8 @@ Item {
     required property string backgroundPath
     property bool active: false
     property bool animationEnabled: true
+    property bool sceneMotionEnabled: true
+    property bool lightingEnabled: true
     readonly property string name: backgroundPath.split("/").pop()
     readonly property bool busScene: name === "london.png"
     readonly property bool palace: name === "buckingham-palace.png"
@@ -22,9 +24,11 @@ Item {
     property date clockTime: new Date()
     property string daylightOverride: ""
     property string weatherCondition: "none"
+    property var solarLocation: null
     readonly property var weatherLook: Weather.look(weatherCondition)
-    readonly property var daylight: Daylight.atHour(clockTime.getHours() + clockTime.getMinutes() / 60, daylightOverride)
+    readonly property var daylight: lightingEnabled ? Daylight.atTime(clockTime, solarLocation, daylightOverride) : Daylight.original()
     readonly property string daylightPhase: daylight.label
+    readonly property int lightTransitionDuration: daylightOverride !== "" ? 1200 : 60000
     property bool daylightReady: false
     Component.onCompleted: daylightReady = true
     visible: active && supported && picture.status === Image.Ready
@@ -45,7 +49,7 @@ Item {
     Timer {
         interval: 50
         repeat: true
-        running: motion.visible && motion.animationEnabled
+        running: motion.visible && motion.animationEnabled && motion.sceneMotionEnabled
         onTriggered: motion.seconds = (motion.seconds + 0.05) % 660
     }
 
@@ -59,18 +63,24 @@ Item {
         layer.enabled: true
         layer.textureSize: Qt.size(Math.min(6144, Math.ceil(width * motion.fitScale * motion.displayScale)), Math.min(3456, Math.ceil(height * motion.fitScale * motion.displayScale)))
         layer.smooth: true
-        layer.effect: MultiEffect {
-            autoPaddingEnabled: false
-            brightness: motion.daylight.brightness + motion.weatherLook.brightness
-            contrast: motion.daylight.contrast + motion.weatherLook.contrast
-            saturation: motion.daylight.saturation + motion.weatherLook.saturation
-            colorization: motion.daylight.colorization
-            colorizationColor: motion.daylight.color
-            Behavior on brightness { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: 60000 } }
-            Behavior on contrast { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: 60000 } }
-            Behavior on saturation { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: 60000 } }
-            Behavior on colorization { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: 60000 } }
-            Behavior on colorizationColor { enabled: motion.daylightReady && motion.animationEnabled; ColorAnimation { duration: 60000 } }
+        layer.effect: ShaderEffect {
+            property var source
+            property real brightness: motion.daylight.brightness + motion.weatherLook.brightness
+            property real contrast: motion.daylight.contrast + motion.weatherLook.contrast
+            property real saturation: motion.daylight.saturation + motion.weatherLook.saturation
+            property real colorization: motion.daylight.colorization
+            property color colorizationColor: motion.daylight.color
+            property real daylightAmount: motion.daylight.dayAmount
+            property real sceneKind: motion.busScene ? 0 : motion.palace ? 1 : 2
+            property real lightingStrength: motion.lightingEnabled ? 1 : 0
+            property real flagPhase: motion.seconds * 2 * Math.PI / 4.4
+            fragmentShader: "SceneLighting.frag.qsb"
+            Behavior on brightness { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
+            Behavior on contrast { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
+            Behavior on saturation { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
+            Behavior on colorization { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
+            Behavior on colorizationColor { enabled: motion.daylightReady && motion.animationEnabled; ColorAnimation { duration: motion.lightTransitionDuration } }
+            Behavior on daylightAmount { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
         }
 
         Image {
@@ -117,58 +127,7 @@ Item {
             smooth: true
         }
 
-        Canvas {
-            id: flag
-            visible: !motion.busScene
-            x: motion.palace ? 2180 : 1450
-            y: motion.palace ? 1100 : 1080
-            width: 86
-            height: 80
-            readonly property real renderScale: Math.max(1, Math.min(1.6, motion.fitScale * motion.displayScale))
-            readonly property real sourceScaleX: picture.sourceSize.width > 0 ? picture.sourceSize.width / motion.imageWidth : 1
-            readonly property real sourceScaleY: picture.sourceSize.height > 0 ? picture.sourceSize.height / motion.imageHeight : 1
-            canvasSize: Qt.size(Math.ceil(width * renderScale), Math.ceil(height * renderScale))
-            onCanvasSizeChanged: requestPaint()
-            property real phase: motion.seconds * 2 * Math.PI / 4.4
-            property real pole: motion.palace ? 2186 : 1456
-            property string imagePath: !motion.supported || motion.busScene ? "" : "file://" + motion.backgroundPath
-            property string loadedPath: ""
-            Component.onCompleted: if (imagePath) loadImage(imagePath)
-            onAvailableChanged: if (available && imagePath) loadImage(imagePath)
-            onImagePathChanged: {
-                if (loadedPath) unloadImage(loadedPath)
-                loadedPath = imagePath
-                if (imagePath) loadImage(imagePath)
-            }
-            onImageLoaded: requestPaint()
-            onPhaseChanged: if (imagePath && isImageLoaded(imagePath)) requestPaint()
-            function ramp(a, b, v) {
-                const t = Math.max(0, Math.min(1, (v - a) / (b - a)))
-                return t * t * (3 - 2 * t)
-            }
-            onPaint: {
-                if (!imagePath || !isImageLoaded(imagePath)) return
-                const ctx = getContext("2d")
-                const w = canvasSize.width, h = canvasSize.height
-                ctx.clearRect(0, 0, w, h)
-                // Small textured strips retain the hand-drawn flag artwork.
-                for (let px = 0; px < w; px++) {
-                    const along = Math.max(0, Math.min(1, (x + px / renderScale - pole) / (x + width - pole)))
-                    const horizontal = ramp(0, 0.25, along) * (1 - ramp(0.82, 1, along))
-                    for (let py = 0; py < h; py += 4) {
-                        const hh = Math.min(4, h - py)
-                        const t = (py + hh / 2) / h
-                        const envelope = horizontal * ramp(0, 0.18, t) * (1 - ramp(0.8, 1, t))
-                        const shift = 2.2 * envelope * Math.sin(along * 7 - phase)
-                        ctx.drawImage(imagePath,
-                            (x + px / renderScale) * sourceScaleX,
-                            (y + py / renderScale + shift) * sourceScaleY,
-                            sourceScaleX / renderScale, hh * sourceScaleY / renderScale,
-                            px, py, 1, hh)
-                    }
-                }
-            }
-        }
+
     }
 
     // A faint horizon wash complements the tonal treatment without hiding grain.
@@ -181,15 +140,17 @@ Item {
             GradientStop {
                 position: 0.72
                 color: motion.daylight.glow
-                Behavior on color { enabled: motion.daylightReady && motion.animationEnabled; ColorAnimation { duration: 60000 } }
+                Behavior on color { enabled: motion.daylightReady && motion.animationEnabled; ColorAnimation { duration: motion.lightTransitionDuration } }
             }
             GradientStop { position: 1; color: "transparent" }
         }
-        Behavior on opacity { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: 60000 } }
+        Behavior on opacity { enabled: motion.daylightReady && motion.animationEnabled; NumberAnimation { duration: motion.lightTransitionDuration } }
     }
     WeatherOverlay {
         anchors.fill: parent
         seconds: motion.seconds
+        drawnScene: !motion.busScene
+        daylightAmount: motion.lightingEnabled ? motion.daylight.dayAmount : 1
         appearance: motion.weatherLook
         animateTransitions: motion.daylightReady && motion.animationEnabled
     }

@@ -1,21 +1,17 @@
 # Changes
 
-## 2.0.0 — local update
+## 2.0.0
 
-- Morning, afternoon, evening and night lighting, with continuous transitions
-  based on local system time.
-- Optional live weather for an explicitly configured city: cloudy/clear lighting,
-  fog, rain, snow, and darkened storm conditions. No IP-location lookup.
-- Native 6K vector backgrounds for the palace and castle, matching London.
-  All three theme PNGs are 6144 × 3456, rendered directly from SVG.
-- High-resolution bus/wheel assets and monitor-scaled flag animation patches.
-- This edition requires the matching vector theme; earlier pencil backgrounds
-  use different flag positions.
-
-The 1.0.0 marketplace submission is still a separate, earlier reviewed commit.
-This local update has not been pushed or submitted for a new marketplace review.
+- Clock-adjacent wallpaper controls with a three-scene selector, motion and lighting switches, saved presets, weather controls and city input.
+- Morning, afternoon, evening and night follow seasonal solar position for the configured city, with local-time fallback.
+- Slate-blue atmospheric treatment of the current architectural pen-and-pencil drawings, preserving fine lines and restrained colour accents.
+- Lamps fade with daylight; no glowing palace/castle windows are invented.
+- Optional explicit-city weather: clear/cloudy light, rain, fog, snow and subdued storms; no IP-location lookup.
+- Continuous flag cloth deformation in the full-scene shader, with stationary poles and no overlay seam.
+- High-resolution scene assets, system-time Big Ben clock and monitor-scaled rendering.
+- Superseded artwork and outdated demonstration media removed from the release.
 
 ## 1.0.0
 
 Initial submission: slow bus, rotating London Eye, local-time Big Ben clock,
-and waving palace/castle flags.
+and waving flags on the earlier palace/castle artwork.

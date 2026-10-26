@@ -36,7 +36,11 @@ function parse(raw) {
         var condition = conditionForCode(current.weatherCode);
         if (condition === "none") return null;
         var area = data.nearest_area && data.nearest_area[0];
+        var latitude = area && typeof area.latitude !== "undefined" && String(area.latitude).trim() !== "" ? Number(area.latitude) : NaN;
+        var longitude = area && typeof area.longitude !== "undefined" && String(area.longitude).trim() !== "" ? Number(area.longitude) : NaN;
         return { condition: condition, code: Number(current.weatherCode), wind: Math.max(0, Math.min(150, Number(current.windspeedKmph) || 0)),
+            latitude: isFinite(latitude) && Math.abs(latitude) <= 90 ? latitude : null,
+            longitude: isFinite(longitude) && Math.abs(longitude) <= 180 ? longitude : null,
             location: area && area.areaName && area.areaName[0] ? String(area.areaName[0].value || "") : "",
             observation: String(current.localObsDateTime || current.observation_time || "") };
     } catch (_) { return null; }

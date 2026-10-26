@@ -10,6 +10,7 @@ import QtQuick.Shapes
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "Settings.js" as Settings
 
 Item {
   id: root
@@ -33,10 +34,67 @@ Item {
   property string daylightOverride: ""
   property string daylightPhase: ""
   property string weatherOverride: "automatic"
+  property var options: Settings.defaults()
+  property string settingsError: ""
+  property bool settingsSaving: false
+  readonly property bool weatherConfigured: weatherService.query !== ""
+  readonly property string effectiveWeather: weatherOverride !== "automatic" ? (weatherOverride === "off" ? "none" : weatherOverride) : options.weatherEnabled ? weatherService.condition : "none"
+  readonly property string weatherStatus: !options.weatherEnabled ? "Live weather off" : !weatherConfigured ? "Enter a city to enable weather updates" : weatherService.fresh ? weatherService.locationName + " · " + weatherService.condition : "Waiting for weather · lighting continues offline"
+
+  FileView {
+    id: preferencesFile
+    path: root.home + "/.config/omarchy/london-motion.json"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: if (!savePreferences.running && !root.settingsSaving) root.options = Settings.parse(text())
+    onSaved: { root.settingsSaving = false; root.settingsError = "" }
+    onSaveFailed: { root.settingsSaving = false; root.settingsError = "Could not save wallpaper preferences" }
+  }
+  Timer {
+    id: savePreferences
+    interval: 150
+    onTriggered: {
+      root.settingsSaving = true
+      preferencesFile.setText(JSON.stringify(root.options, null, 2) + "\n")
+    }
+  }
+  function setOption(key, value) {
+    if (!Object.prototype.hasOwnProperty.call(Settings.defaults(), key)) return false
+    var next = Object.assign({}, options)
+    next[key] = value
+    options = Settings.normalize(next)
+    if (key === "lightingMode" || key === "lightingEnabled") daylightOverride = ""
+    if (key === "weatherEnabled") weatherOverride = "automatic"
+    savePreferences.restart()
+    return true
+  }
+  function selectBackground(filename) {
+    if (selectedTheme.text().trim() !== "london" || backgroundSetProc.running) return false
+    if (["london.png", "buckingham-palace.png", "windsor-castle-phone-box.png"].indexOf(filename) < 0) return false
+    backgroundSetProc.command = ["omarchy", "theme", "bg", "set", root.stateHome + "/omarchy/current/theme/backgrounds/" + filename]
+    backgroundSetProc.running = true
+    return true
+  }
+  Process {
+    id: backgroundSetProc
+    onExited: root.refreshBackground()
+  }
+  function setDaylightPreview(period) {
+    if (["automatic", "morning", "afternoon", "evening", "night"].indexOf(period) < 0) return false
+    daylightOverride = period === "automatic" ? "" : period
+    return true
+  }
+  function setWeatherPreview(condition) {
+    if (["automatic", "off", "clear", "cloudy", "rain", "fog", "snow", "storm"].indexOf(condition) < 0) return false
+    weatherOverride = condition
+    return true
+  }
 
   WeatherService {
     id: weatherService
-    enabled: selectedTheme.text().trim() === "london" && root.weatherOverride !== "off"
+    enabled: selectedTheme.text().trim() === "london" && root.options.weatherEnabled && root.weatherOverride === "automatic"
+    locationOverride: root.options.weatherLocation
   }
 
   FileView {
@@ -156,21 +214,24 @@ Item {
     }
 
     function motionStatus(): string {
-      return JSON.stringify({theme: selectedTheme.text().trim(), background: root.displayedBackground, seconds: root.motionSeconds, timeOfDay: root.daylightPhase, preview: root.daylightOverride || "automatic", weather: root.weatherOverride === "automatic" ? weatherService.condition : root.weatherOverride, weatherLocation: weatherService.locationName, weatherFresh: weatherService.fresh})
+      return JSON.stringify({theme: selectedTheme.text().trim(), background: root.displayedBackground, seconds: root.motionSeconds, timeOfDay: root.daylightPhase, preview: root.daylightOverride || root.options.lightingMode, weather: root.effectiveWeather, weatherLocation: weatherService.locationName, weatherFresh: weatherService.fresh, options: root.options, settingsError: root.settingsError})
+    }
+
+    function setOption(key: string, value: string): string {
+      var parsed = value
+      if (["motionEnabled", "lightingEnabled", "weatherEnabled"].indexOf(key) >= 0) {
+        if (value !== "true" && value !== "false") return "Use true or false"
+        parsed = value === "true"
+      }
+      return root.setOption(key, parsed) ? "ok" : "Unknown option"
     }
 
     function previewTimeOfDay(period: string): string {
-      if (["automatic", "morning", "afternoon", "evening", "night"].indexOf(period) < 0)
-        return "Use automatic, morning, afternoon, evening or night"
-      root.daylightOverride = period === "automatic" ? "" : period
-      return "ok"
+      return root.setDaylightPreview(period) ? "ok" : "Use automatic, morning, afternoon, evening or night"
     }
 
     function previewWeather(condition: string): string {
-      if (["automatic", "off", "clear", "cloudy", "rain", "fog", "snow", "storm"].indexOf(condition) < 0)
-        return "Use automatic, off, clear, cloudy, rain, fog, snow or storm"
-      root.weatherOverride = condition
-      return "ok"
+      return root.setWeatherPreview(condition) ? "ok" : "Use automatic, off, clear, cloudy, rain, fog, snow or storm"
     }
 
     function set(path: string): void {
@@ -276,8 +337,11 @@ Item {
         anchors.fill: parent
         backgroundPath: root.displayedBackground
         onSecondsChanged: root.motionSeconds = seconds
-        daylightOverride: root.daylightOverride
-        weatherCondition: root.weatherOverride === "automatic" ? weatherService.condition : root.weatherOverride === "off" ? "none" : root.weatherOverride
+        sceneMotionEnabled: root.options.motionEnabled
+        solarLocation: weatherService.report
+        lightingEnabled: root.options.lightingEnabled
+        daylightOverride: root.daylightOverride || (root.options.lightingMode === "automatic" ? "" : root.options.lightingMode)
+        weatherCondition: root.effectiveWeather
         onDaylightPhaseChanged: root.daylightPhase = daylightPhase
         active: selectedTheme.text().trim() === "london"
                 && root.incomingBackground === "" && root.revealProgress >= 1

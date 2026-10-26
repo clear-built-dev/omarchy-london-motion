@@ -6,12 +6,13 @@ import "Weather.js" as Weather
 Item {
     id: weather
     property bool enabled: false
+    property string locationOverride: ""
     property var report: null
     property double fetchedAt: 0
     property double now: Date.now()
     readonly property bool fresh: report !== null && Weather.isFresh(fetchedAt, now)
     readonly property string condition: fresh ? report.condition : "none"
-    readonly property string query: Weather.locationQuery(preferences.text()) || Weather.locationQuery(location.text())
+    readonly property string query: locationOverride.trim() ? encodeURIComponent(locationOverride.trim()) : Weather.locationQuery(preferences.text()) || Weather.locationQuery(location.text())
     property string requestedQuery: ""
     property string pendingRaw: ""
     readonly property string locationName: fresh && report.location ? report.location : query ? "Configured weather city" : "Weather location not configured"
